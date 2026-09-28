@@ -35,9 +35,10 @@ export interface UserSession {
   email: string;
   name: string;
   role: UserRole;
-  department?: string;          // staff/admin only
-  studentId?: string;           // student only
-  year?: string;                // student only
+  department?: string;          // staff/admin display name
+  departmentId?: string;        // maps to DEPARTMENTS key for queue scoping
+  studentId?: string;
+  year?: string;
 }
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
@@ -103,27 +104,35 @@ export type CaseEventType =
   | "acknowledged"
   | "assigned"
   | "reassigned"
+  | "rerouted"            // step 2 addition
   | "escalated"
   | "note_added"
   | "appointment_offered"
   | "status_changed"
   | "routing_feedback"
-  | "withdrawn";
+  | "withdrawn"
+  | "alert_sent";         // crisis auto-alert
 
 export interface CaseEvent {
   id: string;
   type: CaseEventType;
   timestamp: string;
-  actor: string;         // "system", staff name, student name
+  actor: string;
   actorRole: UserRole | "system";
-  detail?: string;       // human-readable detail
+  actorName?: string;         // step 2: display name
+  department?: string;        // step 2: department display name
+  detail?: string;
+  visibleToStudent: boolean;  // step 2: controls student activity feed
   metadata?: Record<string, unknown>;
 }
 
 export interface AppointmentSlot {
   id: string;
-  label: string;          // e.g. "Mon 2 Oct, 10:00–10:30"
+  label: string;
   available: boolean;
+  mode?: "in_person" | "phone" | "video";  // step 2
+  durationMins?: number;                   // step 2
+  isoDateTime?: string;                    // step 2: for .ics generation
 }
 
 export interface StaffNote {
@@ -141,8 +150,6 @@ export interface RoutingFeedback {
   submittedBy: string;
 }
 
-// ── Intake + segments ─────────────────────────────────────────────────────────
-
 export interface IntakeFormData {
   mainText: string;
   contextText: string;
@@ -155,26 +162,56 @@ export interface TextSegment {
   isSensitive: boolean;
 }
 
-// ── Case record (v2) ──────────────────────────────────────────────────────────
+// ── Step-2 additions ──────────────────────────────────────────────────────────
+
+export interface AssigneeInfo {
+  staffId: string;
+  name: string;
+  title: string;
+  department: string;
+  email: string;
+  phone?: string;
+}
+
+export interface LocationInfo {
+  building: string;
+  block?: string;
+  floor?: string;
+  room: string;
+  officeHours: string;
+  note?: string;
+}
+
+export interface SLAInfo {
+  dueAt: string;              // ISO
+  firstResponseAt?: string;   // ISO, set when first viewed by staff
+}
+
+// ── Case record (v3) ──────────────────────────────────────────────────────────
+// Migration: store.ts fills safe defaults for any missing field.
 
 export interface CaseRecord {
-  _v: 2;
+  _v: 3;
   id: string;
   createdAt: string;
-  studentId: string | null;         // null for guests
-  studentName: string | null;       // display only
+  studentId: string | null;
+  studentName: string | null;
   intakeData: IntakeFormData;
   scoringResult: ScoringResult;
   routingResult: RoutingResult;
   segments: TextSegment[];
   submitted: boolean;
   status: CaseStatus;
-  assignedTo: string | null;        // staff name
+  assignedTo: string | null;             // staff display name (legacy)
   assignedDepartmentId: string | null;
+  assignee?: AssigneeInfo;               // step 2: rich assignee
+  location?: LocationInfo;               // step 2: where to go
+  offeredAppointment: AppointmentSlot | null;
+  sla?: SLAInfo;                         // step 2
+  firstViewedAt?: string;                // step 2: ISO, set on first staff view
   events: CaseEvent[];
   notes: StaffNote[];
   appointmentSlots: AppointmentSlot[];
-  offeredAppointment: AppointmentSlot | null;
   routingFeedback: RoutingFeedback | null;
   revokedAt: string | null;
   acknowledgedAt: string | null;

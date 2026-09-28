@@ -1,15 +1,28 @@
 /**
  * In-memory + localStorage data layer with simulated 200–300ms latency.
- * Migrates v1 records to v2 on hydration.
+ * Migrates v1/v2 records to v3 on hydration.
+ * Broadcasts every write through BroadcastChannel + storage event for cross-tab sync.
  */
 
-import type { CaseRecord, CaseStatus } from "@/types";
+import type { CaseRecord, CaseStatus, SLA_MINUTES } from "@/types";
 import { simulatedLatency } from "./utils";
 
 const STORAGE_KEY = "campusreach_cases";
+const BC_CHANNEL  = "campusreach";
 
 let cache: CaseRecord[] = [];
 let hydrated = false;
+let bc: BroadcastChannel | null = null;
+
+function getBroadcastChannel(): BroadcastChannel | null {
+  if (bc) return bc;
+  try {
+    bc = new BroadcastChannel(BC_CHANNEL);
+  } catch {
+    bc = null;
+  }
+  return bc;
+}
 
 // ── Migration ──────────────────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,7 +31,7 @@ function migrateRecord(raw: any): CaseRecord {
   const routing = raw.routingResult ?? {};
 
   return {
-    _v: 2,
+    _v: 3,
     id: raw.id ?? `migrated-${Date.now()}`,
     createdAt: raw.createdAt ?? new Date().toISOString(),
     submitted: raw.submitted ?? false,
@@ -27,9 +40,19 @@ function migrateRecord(raw: any): CaseRecord {
     status: (raw.status as CaseStatus) ?? "submitted",
     assignedTo: raw.assignedTo ?? null,
     assignedDepartmentId: raw.assignedDepartmentId ?? null,
-    events: Array.isArray(raw.events) ? raw.events : [],
+    // v3 additions — safe defaults
+    assignee: raw.assignee ?? undefined,
+    location: raw.location ?? undefined,
+    sla: raw.sla ?? undefined,
+    firstViewedAt: raw.firstViewedAt ?? undefined,
+    events: (Array.isArray(raw.events) ? raw.events : []).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (e: any) => ({ visibleToStudent: true, ...e })
+    ),
     notes: Array.isArray(raw.notes) ? raw.notes : [],
-    appointmentSlots: Array.isArray(raw.appointmentSlots) ? raw.appointmentSlots : [],
+    appointmentSlots: Array.isArray(raw.appointmentSlots)
+      ? raw.appointmentSlots
+      : [],
     offeredAppointment: raw.offeredAppointment ?? null,
     routingFeedback: raw.routingFeedback ?? null,
     revokedAt: raw.revokedAt ?? null,
@@ -92,6 +115,11 @@ function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
   } catch { /* storage full */ }
+  // Notify other tabs
+  const ch = getBroadcastChannel();
+  if (ch) {
+    try { ch.postMessage({ type: "store_updated", ts: Date.now() }); } catch { /* */ }
+  }
 }
 
 function generateId(): string {
@@ -104,6 +132,14 @@ function generateEventId(): string {
 
 export { generateEventId };
 
+/** Re-hydrate from localStorage (called on cross-tab storage events) */
+export function forceRehydrate(): CaseRecord[] {
+  hydrated = false;
+  cache = [];
+  hydrate();
+  return [...cache];
+}
+
 export async function saveCase(
   record: Omit<CaseRecord, "id" | "createdAt" | "_v">
 ): Promise<CaseRecord> {
@@ -112,7 +148,7 @@ export async function saveCase(
 
   const full: CaseRecord = {
     ...record,
-    _v: 2,
+    _v: 3,
     id: generateId(),
     createdAt: new Date().toISOString(),
   };
@@ -132,7 +168,7 @@ export async function updateCase(
   const idx = cache.findIndex((c) => c.id === id);
   if (idx === -1) return null;
 
-  cache[idx] = { ...cache[idx], ...patch, _v: 2 };
+  cache[idx] = { ...cache[idx], ...patch, _v: 3 };
   persist();
   return cache[idx];
 }
@@ -159,11 +195,11 @@ export async function clearCases(): Promise<void> {
   await simulatedLatency();
   cache = [];
   localStorage.removeItem(STORAGE_KEY);
+  persist();
 }
 
-/** Reset to seed data */
 export function resetToSeed(seedCases: CaseRecord[]): void {
-  cache = [...seedCases];
+  cache = seedCases.map((c) => ({ ...c, _v: 3 as const }));
   hydrated = true;
   persist();
 }
