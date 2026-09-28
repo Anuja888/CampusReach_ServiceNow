@@ -199,14 +199,17 @@ export function scoreText(text: string): ScoringResult {
   }
 
   if (isCrisis) {
-    // Override to crisis category
     const primaryCategory: Category = "crisis";
     return {
       score: totalScore,
       urgencyLevel,
       primaryCategory,
+      secondaryCategory: null,
       matchedKeywords: deduplicated,
       isCrisis: true,
+      source: "rules" as const,
+      evidencePhrases: deduplicated.slice(0, 5).map((m) => m.word),
+      needsHumanTriage: false,
     };
   }
 
@@ -219,8 +222,12 @@ export function scoreText(text: string): ScoringResult {
     score: totalScore,
     urgencyLevel,
     primaryCategory,
+    secondaryCategory: null,
     matchedKeywords: deduplicated,
     isCrisis: false,
+    source: "rules" as const,
+    evidencePhrases: deduplicated.slice(0, 5).map((m) => m.word),
+    needsHumanTriage: false,
   };
 }
 

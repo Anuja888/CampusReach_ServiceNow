@@ -1,12 +1,13 @@
 /**
  * Department routing logic.
  * Maps (category × urgency) → department + explanation sentence.
- * Explanation uses Gemini API if VITE_GEMINI_API_KEY is set,
- * otherwise falls back to a template sentence built from matched keywords.
+ * Explanation uses Gemini for the human-readable sentence only (not classification).
+ * Falls back to template sentence if no API key.
  */
 
 import type {
   Category,
+  ClassificationSource,
   Department,
   MatchedKeyword,
   RoutingResult,
@@ -14,9 +15,8 @@ import type {
   UrgencyLevel,
 } from "@/types";
 
-// ---------------------------------------------------------------------------
-// Department catalogue — 12 campus support areas collapsed to 6 routable desks
-// ---------------------------------------------------------------------------
+// ── Department catalogue ───────────────────────────────────────────────────────
+
 export const DEPARTMENTS: Record<string, Department> = {
   crisis_line: {
     id: "crisis_line",
@@ -24,7 +24,7 @@ export const DEPARTMENTS: Record<string, Department> = {
     shortName: "Crisis Line",
     description:
       "Immediate 24/7 support for students in acute distress. A trained counsellor will answer within minutes.",
-    contact: "ext. 999 / 0800 111 222",
+    contact: "Tele-MANAS 14416 / 1-800-891-4416 (24×7)",
     typicalWait: "< 5 minutes",
     color: "crisis",
   },
@@ -34,7 +34,7 @@ export const DEPARTMENTS: Record<string, Department> = {
     shortName: "Wellbeing",
     description:
       "Counselling, mental health support, and emotional wellbeing. First appointments within 3 working days.",
-    contact: "wellbeing@university.ac.uk",
+    contact: "wellbeing@university.edu",
     typicalWait: "2–3 working days",
     color: "teal",
   },
@@ -44,7 +44,7 @@ export const DEPARTMENTS: Record<string, Department> = {
     shortName: "Academic Support",
     description:
       "Deadline extensions, mitigating circumstances, study skills coaching, and tutor referrals.",
-    contact: "academic.support@university.ac.uk",
+    contact: "academic.support@university.edu",
     typicalWait: "Same day response",
     color: "teal",
   },
@@ -54,7 +54,7 @@ export const DEPARTMENTS: Record<string, Department> = {
     shortName: "Financial Aid",
     description:
       "Emergency bursaries, hardship grants, debt advice, and help navigating student finance.",
-    contact: "financialaid@university.ac.uk",
+    contact: "financialaid@university.edu",
     typicalWait: "1–2 working days",
     color: "teal",
   },
@@ -64,7 +64,7 @@ export const DEPARTMENTS: Record<string, Department> = {
     shortName: "Housing",
     description:
       "Emergency accommodation, tenancy disputes, and connections to local housing support.",
-    contact: "housing@university.ac.uk",
+    contact: "housing@university.edu",
     typicalWait: "Same day for emergencies",
     color: "teal",
   },
@@ -74,7 +74,7 @@ export const DEPARTMENTS: Record<string, Department> = {
     shortName: "Health Centre",
     description:
       "GP and nursing appointments, referrals, and ongoing physical health support.",
-    contact: "health@university.ac.uk",
+    contact: "health@university.edu",
     typicalWait: "1–3 working days",
     color: "teal",
   },
@@ -84,19 +84,28 @@ export const DEPARTMENTS: Record<string, Department> = {
     shortName: "Student Services",
     description:
       "General advice and signposting. If you're unsure where to turn, start here — we'll figure it out together.",
-    contact: "studentservices@university.ac.uk",
+    contact: "studentservices@university.edu",
     typicalWait: "Same day",
+    color: "teal",
+  },
+  // NEW — human triage fallback
+  human_triage: {
+    id: "human_triage",
+    name: "Student Support Front Desk (Human Triage)",
+    shortName: "Front Desk",
+    description:
+      "A member of our team will personally review your message and connect you with the right support. No automated guess.",
+    contact: "support@university.edu",
+    typicalWait: "Within 2 hours",
     color: "teal",
   },
 };
 
-// ---------------------------------------------------------------------------
-// Routing table: (category, urgency) → department id
-// ---------------------------------------------------------------------------
+// ── Routing table ──────────────────────────────────────────────────────────────
+
 type RoutingKey = `${Category}:${UrgencyLevel}`;
 
 const ROUTING_TABLE: Partial<Record<RoutingKey, string>> = {
-  // Crisis — always crisis line regardless of category
   "crisis:crisis": "crisis_line",
   "mental_health:crisis": "crisis_line",
   "academic_stress:crisis": "crisis_line",
@@ -106,55 +115,48 @@ const ROUTING_TABLE: Partial<Record<RoutingKey, string>> = {
   "social_isolation:crisis": "crisis_line",
   "general:crisis": "crisis_line",
 
-  // Mental health
   "mental_health:high": "wellbeing",
   "mental_health:medium": "wellbeing",
   "mental_health:low": "wellbeing",
 
-  // Social isolation → wellbeing
   "social_isolation:high": "wellbeing",
   "social_isolation:medium": "wellbeing",
   "social_isolation:low": "wellbeing",
 
-  // Academic
-  "academic_stress:high": "wellbeing",   // high academic stress → wellbeing first
+  "academic_stress:high": "wellbeing",
   "academic_stress:medium": "academic_support",
   "academic_stress:low": "academic_support",
 
-  // Financial
   "financial:high": "financial_aid",
   "financial:medium": "financial_aid",
   "financial:low": "financial_aid",
 
-  // Housing
   "housing:high": "housing",
   "housing:medium": "housing",
   "housing:low": "housing",
 
-  // Physical health
   "physical_health:high": "health_centre",
   "physical_health:medium": "health_centre",
   "physical_health:low": "health_centre",
 
-  // General
   "general:high": "wellbeing",
   "general:medium": "general_advice",
   "general:low": "general_advice",
 };
 
-// ---------------------------------------------------------------------------
-// Template-based explanation builder (no API key needed)
-// ---------------------------------------------------------------------------
+// ── Template explanation ───────────────────────────────────────────────────────
+
 function buildTemplateExplanation(
   department: Department,
   category: Category,
   urgencyLevel: UrgencyLevel,
-  matchedKeywords: MatchedKeyword[]
+  evidencePhrases: string[],
+  source: ClassificationSource,
+  needsHumanTriage: boolean
 ): string {
-  const topWords = matchedKeywords
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 3)
-    .map((k) => k.word);
+  if (needsHumanTriage) {
+    return `We're not sure yet — a person will review this and connect you with the right team. No automated guess has been made.`;
+  }
 
   const urgencyPhrase: Record<UrgencyLevel, string> = {
     low: "Your message suggests you could benefit from early support",
@@ -163,34 +165,34 @@ function buildTemplateExplanation(
     crisis: "Your message contains signals that need immediate attention",
   };
 
+  const topWords = evidencePhrases.slice(0, 3);
   const keywordPhrase =
-    topWords.length > 0
-      ? ` — your message mentioned ${topWords.join(", ")}`
+    topWords.length > 0 ? ` — your message mentioned ${topWords.join(", ")}` : "";
+
+  const sourceNote =
+    source === "ai" || source === "ai_cached"
+      ? " (AI-assisted classification)"
       : "";
 
-  return `${urgencyPhrase[urgencyLevel]}${keywordPhrase}. Routed to ${department.name}.`;
+  return `${urgencyPhrase[urgencyLevel]}${keywordPhrase}${sourceNote}. Routed to ${department.name}.`;
 }
 
-// ---------------------------------------------------------------------------
-// Gemini explanation (optional, gracefully skipped if no key)
-// ---------------------------------------------------------------------------
+// ── Gemini explanation for the result sentence only ────────────────────────────
+
 async function buildGeminiExplanation(
   department: Department,
   scoringResult: ScoringResult
 ): Promise<string | null> {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
   if (!apiKey) return null;
+  if (scoringResult.needsHumanTriage) return null;
 
-  const topWords = scoringResult.matchedKeywords
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 5)
-    .map((k) => k.word)
-    .join(", ");
+  const topWords = scoringResult.evidencePhrases.slice(0, 5).join(", ");
 
-  const prompt = `You are a campus support system. In one natural sentence (max 30 words), explain why a student was routed to "${department.name}". Their urgency level is "${scoringResult.urgencyLevel}" and key signals were: ${topWords || "general concern"}. Be warm and non-clinical.`;
+  const prompt = `You are a campus support system. In one warm, non-clinical sentence (max 30 words), explain why a student was routed to "${department.name}". Urgency: "${scoringResult.urgencyLevel}". Key signals: ${topWords || "general concern"}.`;
 
   try {
-    const response = await fetch(
+    const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
@@ -201,8 +203,8 @@ async function buildGeminiExplanation(
         }),
       }
     );
-    if (!response.ok) return null;
-    const data = await response.json();
+    if (!resp.ok) return null;
+    const data = await resp.json();
     const text: string =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     return text.trim() || null;
@@ -211,55 +213,80 @@ async function buildGeminiExplanation(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main routing function
-// ---------------------------------------------------------------------------
+// ── Main routing function ──────────────────────────────────────────────────────
+
 export async function routeCase(
   scoringResult: ScoringResult
 ): Promise<RoutingResult> {
-  const { primaryCategory, urgencyLevel, matchedKeywords, score, isCrisis } =
-    scoringResult;
+  const {
+    primaryCategory,
+    urgencyLevel,
+    matchedKeywords,
+    score,
+    isCrisis,
+    source,
+    aiConfidence,
+    evidencePhrases,
+    secondaryCategory,
+    needsHumanTriage,
+  } = scoringResult;
+
+  // Human triage bypass
+  if (needsHumanTriage) {
+    const department = DEPARTMENTS["human_triage"];
+    return {
+      department,
+      urgencyLevel,
+      category: primaryCategory,
+      secondaryCategory,
+      explanation: buildTemplateExplanation(
+        department, primaryCategory, urgencyLevel, evidencePhrases, source, true
+      ),
+      score,
+      matchedKeywords,
+      isCrisis: false,
+      source,
+      aiConfidence,
+      evidencePhrases,
+      needsHumanTriage: true,
+    };
+  }
 
   const key: RoutingKey = `${primaryCategory}:${urgencyLevel}`;
   const deptId = ROUTING_TABLE[key] ?? "general_advice";
   const department = DEPARTMENTS[deptId];
 
-  // Try Gemini, fall back to template
-  const geminiExplanation = await buildGeminiExplanation(
-    department,
-    scoringResult
-  );
+  const geminiExplanation = await buildGeminiExplanation(department, scoringResult);
   const explanation =
     geminiExplanation ??
     buildTemplateExplanation(
-      department,
-      primaryCategory,
-      urgencyLevel,
-      matchedKeywords
+      department, primaryCategory, urgencyLevel, evidencePhrases, source, false
     );
 
   return {
     department,
     urgencyLevel,
     category: primaryCategory,
+    secondaryCategory,
     explanation,
     score,
     matchedKeywords,
     isCrisis,
+    source,
+    aiConfidence,
+    evidencePhrases,
+    needsHumanTriage: false,
   };
 }
 
-// ---------------------------------------------------------------------------
-// Segment splitter — turns intake text into consent-toggleable chunks
-// ---------------------------------------------------------------------------
+// ── Segment splitter (unchanged) ───────────────────────────────────────────────
+
 export function splitIntoSegments(text: string) {
-  // Split on sentence boundaries; keep segments meaningful (≥10 chars)
   const raw = text
     .split(/(?<=[.!?])\s+/)
     .map((s) => s.trim())
     .filter((s) => s.length >= 3);
 
-  // If no sentence breaks, split on commas / line breaks
   const sentences =
     raw.length > 1
       ? raw
@@ -279,20 +306,10 @@ export function splitIntoSegments(text: string) {
 }
 
 const SENSITIVE_PATTERNS = [
-  /suicid/i,
-  /self.?harm/i,
-  /overdos/i,
-  /cutting/i,
-  /medication/i,
-  /disorder/i,
-  /diagnosis/i,
-  /diagnosed/i,
-  /hospital/i,
-  /therapy/i,
-  /therapist/i,
-  /abuse/i,
-  /assault/i,
-  /trauma/i,
+  /suicid/i, /self.?harm/i, /overdos/i, /cutting/i,
+  /medication/i, /disorder/i, /diagnosis/i, /diagnosed/i,
+  /hospital/i, /therapy/i, /therapist/i, /abuse/i,
+  /assault/i, /trauma/i,
 ];
 
 function isSensitivePhrase(text: string): boolean {
