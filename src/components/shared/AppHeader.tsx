@@ -10,6 +10,7 @@
 import { LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/AppContext";
+import { NotificationCenter } from "./NotificationCenter";
 
 interface AppHeaderProps {
   /** Override max-width; defaults to max-w-2xl */
@@ -61,6 +62,8 @@ export function AppHeader({ maxWidth = "max-w-2xl", staffBadge, rightSlot }: App
         {/* Right */}
         {rightSlot ?? (
           <div className="flex items-center gap-2">
+            <NotificationCenter />
+
             {role === "guest" && (
               <Button variant="outline" size="sm" onClick={goToLanding}>
                 Sign in

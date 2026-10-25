@@ -10,6 +10,7 @@ import { StaffQueue } from "@/components/staff/StaffQueue";
 import { StaffView } from "@/components/staff/StaffView";
 import { AdminInsights } from "@/components/admin/AdminInsights";
 import { InactivityGuard } from "@/components/shared/InactivityDialog";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 function AppRouter() {
   const { screen } = useApp();
@@ -38,6 +39,7 @@ export default function App() {
     <AppProvider>
       <InactivityGuard />
       <AppRouter />
+      <ChatWidget />
     </AppProvider>
   );
 }
