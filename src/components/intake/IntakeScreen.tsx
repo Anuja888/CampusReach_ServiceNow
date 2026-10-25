@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/lib/AppContext";
+import { AppHeader } from "@/components/shared/AppHeader";
 
 const MAX_CHARS = 2000;
 
@@ -41,7 +42,7 @@ const EXAMPLES = [
 ];
 
 export function IntakeScreen() {
-  const { submitIntake, isLoading, error, goToQueue, session, goToMyRequests, logout, goToLanding } = useApp();
+  const { submitIntake, isLoading, error, session, goToMyRequests, goToLanding } = useApp();
   const isStudent = session?.role === "student";
   const isGuest = !session || session.role === "guest";
   const [mainText, setMainText] = useState("");
@@ -68,46 +69,7 @@ export function IntakeScreen() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FAF8F5" }}>
-      {/* Header */}
-      <header className="border-b border-stone-200 bg-white">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-semibold text-stone-900 tracking-tight">CampusReach</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-500 bg-stone-100 px-3 py-1 rounded-full border border-stone-200 hidden sm:inline-flex">
-              No Wrong Door
-            </span>
-            {isStudent && (
-              <button
-                onClick={goToMyRequests}
-                className="text-xs text-teal-700 hover:bg-teal-50 border border-teal-200 hover:border-teal-400 px-3 py-1 rounded-full transition-all duration-150"
-              >
-                My Requests
-              </button>
-            )}
-            {isStudent && (
-              <button
-                onClick={logout}
-                className="text-xs text-stone-400 hover:text-stone-700 px-2 py-1 rounded-full transition-all duration-150"
-              >
-                Sign out
-              </button>
-            )}
-            {isGuest && (
-              <button
-                onClick={goToQueue}
-                className="text-xs text-stone-400 hover:text-teal-700 hover:bg-teal-50 border border-stone-200 hover:border-teal-300 px-3 py-1 rounded-full transition-all duration-150"
-              >
-                Staff view →
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-xl">
@@ -276,8 +238,7 @@ export function IntakeScreen() {
                 {" "}so they can reach you.{" "}
                 <button
                   type="button"
-                  onClick={() => goToLanding()}
-                  className="text-teal-600 underline underline-offset-2 hover:text-teal-800 transition-colors"
+                  onClick={() => goToLanding()}                  className="text-teal-600 underline underline-offset-2 hover:text-teal-800 transition-colors"
                 >
                   Sign in
                 </button>

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ArrowRight, Eye, EyeOff, Info, Loader2, Lock, RotateCcw, Shield } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Info, Loader2, Lock, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useApp } from "@/lib/AppContext";
+import { AppHeader } from "@/components/shared/AppHeader";
 import type { TextSegment } from "@/types";
 
 export function HandoffScreen() {
@@ -39,18 +40,7 @@ export function HandoffScreen() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FAF8F5" }}>
-      <header className="border-b border-stone-200 bg-white">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-semibold text-stone-900 tracking-tight">CampusReach</span>
-          <button
-            onClick={resetToIntake}
-            className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Start over
-          </button>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="flex-1 max-w-xl mx-auto w-full px-6 py-10 space-y-6">
 

@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from "recharts";
-import { BookOpen, CheckCircle2, List, LogOut, PlusCircle, RotateCcw, Shield, Zap } from "lucide-react";
+import { BookOpen, CheckCircle2, PlusCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApp } from "@/lib/AppContext";
 import { getSortedMockCases, MOCK_CASES } from "@/lib/mockCases";
 import { listCases } from "@/lib/store";
+import { AppHeader } from "@/components/shared/AppHeader";
 import type { CaseRecord } from "@/types";
 
 // Dictionary override: phrases staff can add to the rules dictionary
@@ -50,7 +51,7 @@ function Toast({ msg, onDismiss }: { msg: string; onDismiss: () => void }) {
 }
 
 export function AdminInsights() {
-  const { logout, goToQueue, resetToIntake, session } = useApp();
+  const { session } = useApp();
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [overrides, setOverrides] = useState<DictOverride[]>(loadOverrides());
   const [toast, setToast] = useState<string | null>(null);
@@ -116,25 +117,7 @@ export function AdminInsights() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FAF8F5" }}>
-      <header className="border-b border-stone-200 bg-white">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <span className="font-semibold text-stone-900 tracking-tight">CampusReach</span>
-              <span className="ml-2 text-xs bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full font-medium">Admin</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-stone-500 hidden sm:block">{session?.name}</span>
-            <Button variant="ghost" size="sm" onClick={goToQueue}><List className="w-3.5 h-3.5" />Queue</Button>
-            <Button variant="ghost" size="sm" onClick={resetToIntake}><RotateCcw className="w-3.5 h-3.5" />Intake</Button>
-            <Button variant="ghost" size="sm" onClick={logout}><LogOut className="w-3.5 h-3.5" />Sign out</Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader maxWidth="max-w-4xl" />
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 space-y-6">
         <h1 className="text-2xl font-bold text-stone-900">Insights</h1>

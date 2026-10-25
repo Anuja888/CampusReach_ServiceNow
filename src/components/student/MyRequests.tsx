@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import {
-  ArrowRight, Calendar, CheckCircle2, Clock, LogOut,
-  RefreshCw, RotateCcw, Shield, Undo2, XCircle
-} from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, Clock, RefreshCw, Undo2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApp } from "@/lib/AppContext";
 import type { CaseRecord, CaseStatus, UrgencyLevel } from "@/types";
 import { getCasesByStudent } from "@/lib/store";
+import { AppHeader } from "@/components/shared/AppHeader";
 
 const URGENCY_BADGE: Record<UrgencyLevel, "low" | "medium" | "high" | "crisis"> = {
   low: "low", medium: "medium", high: "high", crisis: "crisis",
@@ -75,7 +73,7 @@ function TrackerTimeline({ status }: { status: CaseStatus }) {
 }
 
 export function MyRequests() {
-  const { session, revokeCase, resetToIntake, logout } = useApp();
+  const { session, revokeCase, resetToIntake } = useApp();
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
@@ -102,29 +100,7 @@ export function MyRequests() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FAF8F5" }}>
-      <header className="border-b border-stone-200 bg-white">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-semibold text-stone-900 tracking-tight">CampusReach</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-stone-500 hidden sm:block">
-              {session?.name}
-            </span>
-            <Button variant="ghost" size="sm" onClick={resetToIntake}>
-              <RotateCcw className="w-3.5 h-3.5" />
-              New request
-            </Button>
-            <Button variant="ghost" size="sm" onClick={logout}>
-              <LogOut className="w-3.5 h-3.5" />
-              Sign out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-10">
         <div className="mb-6 flex items-center justify-between">

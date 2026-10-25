@@ -1,20 +1,10 @@
 import { motion } from "framer-motion";
-import {
-  ArrowRight,
-  Brain,
-  Building2,
-  CheckCircle2,
-  Clock,
-  Info,
-  Loader,
-  Mail,
-  RotateCcw,
-  Users,
-} from "lucide-react";
+import { ArrowRight, Brain, Building2, CheckCircle2, Clock, Info, Loader, Mail, RotateCcw, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useApp } from "@/lib/AppContext";
+import { AppHeader } from "@/components/shared/AppHeader";
 import type { ClassificationSource, UrgencyLevel } from "@/types";
 
 const container = {
@@ -111,18 +101,7 @@ export function ResultScreen() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FAF8F5" }}>
-      <header className="border-b border-stone-200 bg-white">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-semibold text-stone-900 tracking-tight">CampusReach</span>
-          <button
-            onClick={resetToIntake}
-            className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Start over
-          </button>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="flex-1 max-w-xl mx-auto w-full px-6 py-12">
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">

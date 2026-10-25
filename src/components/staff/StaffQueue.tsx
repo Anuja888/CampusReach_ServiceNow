@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  AlertTriangle, ArrowRight, Clock, Inbox, LogOut,
-  RotateCcw, Search, Shield, User,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock, Inbox, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +7,7 @@ import { useApp } from "@/lib/AppContext";
 import { getSortedMockCases } from "@/lib/mockCases";
 import { listCases } from "@/lib/store";
 import type { CaseRecord, UrgencyLevel } from "@/types";
+import { AppHeader } from "@/components/shared/AppHeader";
 
 const URGENCY_BADGE: Record<UrgencyLevel, "low" | "medium" | "high" | "crisis"> = {
   low: "low", medium: "medium", high: "high", crisis: "crisis",
@@ -54,13 +52,11 @@ function slaStatus(createdAt: string, urgencyLevel: UrgencyLevel): { pct: number
 }
 
 export function StaffQueue() {
-  const { goToStaff, resetToIntake, logoutStaff, staffSession, session } = useApp();
+  const { goToStaff, resetToIntake, session } = useApp();
+  const displayName = session?.name ?? "Staff";
   const [allCases, setAllCases] = useState<CaseRecord[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
-
-  const displayName = staffSession?.name ?? session?.name ?? "Dr. Sarah Okafor";
-  const displayDept = staffSession?.department ?? session?.department ?? "Student Wellbeing Service";
 
   useEffect(() => {
     async function load() {
@@ -112,40 +108,7 @@ export function StaffQueue() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FAF8F5" }}>
-      <header className="border-b border-stone-200 bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <span className="font-semibold text-stone-900 tracking-tight">CampusReach</span>
-              <span className="ml-2 text-xs bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-medium">
-                Staff view
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-stone-400">
-              <User className="w-3.5 h-3.5 text-stone-300" />
-              <span>
-                Signed in as{" "}
-                <span className="text-stone-600 font-medium">{displayName}</span>
-                {" — "}
-                <span className="text-stone-500">{displayDept}</span>
-              </span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={logoutStaff}>
-              <LogOut className="w-3.5 h-3.5" />
-              Sign out
-            </Button>
-            <Button variant="ghost" size="sm" onClick={resetToIntake}>
-              <RotateCcw className="w-3.5 h-3.5" />
-              New intake
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader maxWidth="max-w-3xl" staffBadge />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8">
         {/* Title + summary */}

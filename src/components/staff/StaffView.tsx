@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle, Building2, Calendar, CheckCircle2, Clock,
-  EyeOff, Info, List, LogOut, MessageSquarePlus, RotateCcw,
-  Shield, ShieldAlert, ThumbsDown, ThumbsUp, User, UserCheck,
+  EyeOff, Info, MessageSquarePlus, Shield, ShieldAlert, ThumbsDown, ThumbsUp, User, UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApp } from "@/lib/AppContext";
 import { DEPARTMENTS } from "@/lib/routing";
+import { AppHeader } from "@/components/shared/AppHeader";
+import { getStages } from "@/lib/stages";
 import type { AppointmentSlot, CaseStatus, UrgencyLevel } from "@/types";
 
 const URGENCY_BORDER: Record<UrgencyLevel, string> = {
@@ -71,8 +72,7 @@ export function StaffView() {
   const includedSegments = segments.filter((s) => s.included);
   const restrictedCount = segments.filter((s) => !s.included).length;
 
-  const displayName = staffSession?.name ?? session?.name ?? "Dr. Sarah Okafor";
-  const displayDept = staffSession?.department ?? session?.department ?? "Student Wellbeing Service";
+  const displayName = session?.name ?? "Staff";
 
   // SLA
   const elapsed = (Date.now() - new Date(createdAt).getTime()) / 60000;
@@ -113,28 +113,7 @@ export function StaffView() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#FAF8F5" }}>
-      <header className="border-b border-stone-200 bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <span className="font-semibold text-stone-900 tracking-tight">CampusReach</span>
-              <span className="ml-2 text-xs bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-medium">Staff view</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-stone-400">
-              <User className="w-3.5 h-3.5 text-stone-300" />
-              <span>Signed in as <span className="text-stone-600 font-medium">{displayName}</span> — <span className="text-stone-500">{displayDept}</span></span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={logoutStaff}><LogOut className="w-3.5 h-3.5" />Sign out</Button>
-            <Button variant="ghost" size="sm" onClick={goToQueue}><List className="w-3.5 h-3.5" />Queue</Button>
-            <Button variant="ghost" size="sm" onClick={resetToIntake}><RotateCcw className="w-3.5 h-3.5" />New intake</Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader maxWidth="max-w-3xl" staffBadge />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-5">
         {/* Case header */}
